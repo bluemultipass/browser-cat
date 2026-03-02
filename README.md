@@ -21,7 +21,7 @@ browser-cat --command -- make docs
 | Binary | Description |
 |--------|-------------|
 | `browser-cat` | Main utility — opens a browser window and streams output into it |
-| `a2h` | Standalone ANSI-to-HTML filter, writes to stdout |
+| `browser-cat-a2h` | Standalone ANSI-to-HTML filter, writes to stdout |
 
 ## Options
 
@@ -62,7 +62,7 @@ plain text wrapped in `<pre>`.
 
 ```sh
 cargo build --release
-# binaries land in target/release/browser-cat and target/release/a2h
+# binaries land in target/release/browser-cat and target/release/browser-cat-a2h
 ```
 
 Requires Rust 1.80+ (uses `OnceLock` and `axum` 0.8).
