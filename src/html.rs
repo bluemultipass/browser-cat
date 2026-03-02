@@ -1,6 +1,5 @@
-/// HTML head/body parsing and plain-text-to-HTML conversion.
-///
-/// Ported from bcat's lib/bcat/html.rb by Ryan Tomayko.
+// HTML head/body parsing and plain-text-to-HTML conversion.
+// Ported from bcat's lib/bcat/html.rb by Ryan Tomayko.
 
 // ── HeadParser ────────────────────────────────────────────────────────────────
 
@@ -29,9 +28,9 @@ impl HeadParser {
     /// Feed the next chunk of input. Returns `true` once the body has started
     /// (i.e. [`HeadParser::complete`] would return `true`).
     pub fn feed(&mut self, data: &str) -> bool {
-        if self.body_start.is_some() {
+        if let Some(body) = self.body_start.as_mut() {
             // Already complete — accumulate in body directly.
-            self.body_start.as_mut().unwrap().push_str(data);
+            body.push_str(data);
             return true;
         }
         self.buf.push_str(data);
@@ -121,14 +120,14 @@ impl HeadParser {
         }
 
         // <html ...> or </html>  — structural, discard
-        if let Some(rest) = buf.strip_prefix("<html") {
-            if rest.starts_with(|c: char| c.is_whitespace() || c == '>' || c == '/') {
-                if let Some(end) = buf.find('>') {
-                    self.buf = self.buf[end + 1..].to_string();
-                    return Some(String::new());
-                }
-                return None;
+        if let Some(rest) = buf.strip_prefix("<html")
+            && rest.starts_with(|c: char| c.is_whitespace() || c == '>' || c == '/')
+        {
+            if let Some(end) = buf.find('>') {
+                self.buf = self.buf[end + 1..].to_string();
+                return Some(String::new());
             }
+            return None;
         }
         if buf.starts_with("</html") {
             if let Some(end) = buf.find('>') {
@@ -139,14 +138,14 @@ impl HeadParser {
         }
 
         // <head> or </head> — structural, discard
-        if let Some(rest) = buf.strip_prefix("<head") {
-            if rest.starts_with(|c: char| c.is_whitespace() || c == '>' || c == '/') {
-                if let Some(end) = buf.find('>') {
-                    self.buf = self.buf[end + 1..].to_string();
-                    return Some(String::new());
-                }
-                return None;
+        if let Some(rest) = buf.strip_prefix("<head")
+            && rest.starts_with(|c: char| c.is_whitespace() || c == '>' || c == '/')
+        {
+            if let Some(end) = buf.find('>') {
+                self.buf = self.buf[end + 1..].to_string();
+                return Some(String::new());
             }
+            return None;
         }
         if buf.starts_with("</head") {
             if let Some(end) = buf.find('>') {
@@ -287,7 +286,9 @@ mod tests {
     #[test]
     fn preserves_head_content_tags() {
         let mut p = HeadParser::new();
-        p.feed("<html><head><title>My Page</title><style>body{}</style></head><body>hi</body></html>");
+        p.feed(
+            "<html><head><title>My Page</title><style>body{}</style></head><body>hi</body></html>",
+        );
         assert!(p.complete());
         let head = p.head();
         assert!(head.contains("<title>My Page</title>"));
