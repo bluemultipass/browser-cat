@@ -1,0 +1,22 @@
+[package]
+name = "browser-cat"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "browser-cat"
+path = "src/bin/browser-cat.rs"
+
+[[bin]]
+name = "a2h"
+path = "src/bin/a2h.rs"
+
+[dependencies]
+axum = { version = "0.8", features = ["macros"] }
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+clap = { version = "4", features = ["derive"] }
+regex = "1"
+html-escape = "0.2"
+open = "5"
+bytes = "1"
