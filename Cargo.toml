@@ -1,6 +1,6 @@
 [package]
 name = "browser-cat"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Pipe text or HTML to your browser from the command line — a Rust port of bcat"
 license = "MIT"
@@ -13,6 +13,9 @@ path = "src/bin/browser-cat.rs"
 [[bin]]
 name = "a2h"
 path = "src/bin/a2h.rs"
+
+[dev-dependencies]
+cargo-husky = { version = "1", default-features = false, features = ["user-hooks"] }
 
 [dependencies]
 axum = { version = "0.8", features = ["macros"] }

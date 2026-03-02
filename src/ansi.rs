@@ -73,7 +73,7 @@ enum Token<'a> {
     Backspace,
     Xterm256Fg(u8),
     Xterm256Bg(u8),
-    Ansi(Vec<u32>),  // parsed code list from a CSI m sequence
+    Ansi(Vec<u32>), // parsed code list from a CSI m sequence
     Ignore,
 }
 
@@ -91,11 +91,7 @@ fn tokenize(input: &str) -> Vec<Token<'_>> {
             .find('\x08')
             .map(|i| (i, 0usize))
             .into_iter()
-            .chain(
-                remaining
-                    .find('\x1b')
-                    .map(|i| (i, 1usize)),
-            )
+            .chain(remaining.find('\x1b').map(|i| (i, 1usize)))
             .min_by_key(|(i, _)| *i);
 
         match esc_pos {
@@ -113,41 +109,41 @@ fn tokenize(input: &str) -> Vec<Token<'_>> {
                     pos += 1;
                 } else {
                     // Try xterm-256 first (more specific)
-                    if let Some(m) = p.xterm256.find(remaining) {
-                        if m.start() == 0 {
-                            let caps = p.xterm256.captures(remaining).unwrap();
-                            let idx: u8 = caps[1].parse().unwrap_or(0);
-                            let is_bg = remaining.starts_with("\x1b[48");
-                            if is_bg {
-                                tokens.push(Token::Xterm256Bg(idx));
-                            } else {
-                                tokens.push(Token::Xterm256Fg(idx));
-                            }
-                            pos += m.end();
-                            continue;
+                    if let Some(m) = p.xterm256.find(remaining)
+                        && m.start() == 0
+                    {
+                        let caps = p.xterm256.captures(remaining).unwrap();
+                        let idx: u8 = caps[1].parse().unwrap_or(0);
+                        let is_bg = remaining.starts_with("\x1b[48");
+                        if is_bg {
+                            tokens.push(Token::Xterm256Bg(idx));
+                        } else {
+                            tokens.push(Token::Xterm256Fg(idx));
                         }
+                        pos += m.end();
+                        continue;
                     }
                     // Standard ANSI CSI m
-                    if let Some(m) = p.ansi.find(remaining) {
-                        if m.start() == 0 {
-                            let caps = p.ansi.captures(remaining).unwrap();
-                            let codes: Vec<u32> = caps[1]
-                                .split(';')
-                                .filter(|s| !s.is_empty())
-                                .filter_map(|s| s.parse().ok())
-                                .collect();
-                            tokens.push(Token::Ansi(codes));
-                            pos += m.end();
-                            continue;
-                        }
+                    if let Some(m) = p.ansi.find(remaining)
+                        && m.start() == 0
+                    {
+                        let caps = p.ansi.captures(remaining).unwrap();
+                        let codes: Vec<u32> = caps[1]
+                            .split(';')
+                            .filter(|s| !s.is_empty())
+                            .filter_map(|s| s.parse().ok())
+                            .collect();
+                        tokens.push(Token::Ansi(codes));
+                        pos += m.end();
+                        continue;
                     }
                     // Other CSI (cursor movement etc.) — ignore
-                    if let Some(m) = p.malformed.find(remaining) {
-                        if m.start() == 0 {
-                            tokens.push(Token::Ignore);
-                            pos += m.end();
-                            continue;
-                        }
+                    if let Some(m) = p.malformed.find(remaining)
+                        && m.start() == 0
+                    {
+                        tokens.push(Token::Ignore);
+                        pos += m.end();
+                        continue;
                     }
                     // Bare ESC with nothing recognised — skip one byte
                     tokens.push(Token::Ignore);
@@ -186,8 +182,7 @@ impl Renderer {
     }
 
     fn push_style(&mut self, css: String) {
-        self.output
-            .push_str(&format!("<span style=\"{}\">", css));
+        self.output.push_str(&format!("<span style=\"{}\">", css));
         self.stack.push(Style);
     }
 

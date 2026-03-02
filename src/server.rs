@@ -4,16 +4,16 @@
 /// streams HTML chunks as they arrive. In persist mode the server stays
 /// alive between requests and re-serves buffered content.
 use axum::{
-    body::Body,
-    http::{header, Response, StatusCode},
-    routing::get,
     Router,
+    body::Body,
+    http::{Response, StatusCode, header},
+    routing::get,
 };
 use bytes::Bytes;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use tokio::net::TcpListener;
-use tokio::sync::{broadcast, mpsc, Notify};
+use tokio::sync::{Notify, broadcast, mpsc};
 use tokio_stream::wrappers::ReceiverStream;
 
 // ── Server config ─────────────────────────────────────────────────────────────
@@ -139,10 +139,7 @@ where
             .unwrap();
     });
 
-    ServerHandle {
-        state,
-        addr: bound,
-    }
+    ServerHandle { state, addr: bound }
 }
 
 // ── Request handler ───────────────────────────────────────────────────────────
