@@ -10,7 +10,7 @@ use browser_cat::{
 };
 use bytes::Bytes;
 use clap::Parser;
-use std::io;
+use std::io::{self, IsTerminal};
 use std::path::Path;
 
 // ── CLI ───────────────────────────────────────────────────────────────────────
@@ -116,6 +116,15 @@ async fn main() {
             .collect()
     };
 
+    // If the only source is stdin and it's a terminal, there's nothing to read.
+    if sources.iter().all(|s| matches!(s, Source::Stdin)) && io::stdin().is_terminal() {
+        eprintln!("browser-cat: no input");
+        eprintln!("usage: pipe text or HTML, or pass file names");
+        eprintln!("  echo 'hello' | browser-cat");
+        eprintln!("  browser-cat file.html");
+        std::process::exit(1);
+    }
+
     let mut reader = Reader::new(sources, forced_format);
 
     // Browser name: CLI flag > env var > "default".
@@ -139,14 +148,7 @@ async fn main() {
     };
 
     let handle = server::serve(cfg, |addr| {
-        let cwd_name = std::env::current_dir()
-            .ok()
-            .and_then(|p| {
-                p.file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-            })
-            .unwrap_or_default();
-        let url = format!("http://{}:{}/{}", addr.ip(), addr.port(), cwd_name);
+        let url = format!("http://{}:{}/", addr.ip(), addr.port());
         notice!("url: {}", url);
 
         match browser.open(&url) {
