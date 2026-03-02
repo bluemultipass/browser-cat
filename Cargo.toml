@@ -1,6 +1,6 @@
 [package]
 name = "browser-cat"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "Pipe text or HTML to your browser from the command line — a Rust port of bcat"
 license = "MIT"
