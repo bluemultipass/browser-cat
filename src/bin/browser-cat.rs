@@ -267,12 +267,9 @@ async fn main() {
     } else {
         // Wait until the handler has finished streaming to the browser
         // (up to 30 s), then give TCP a moment to flush before we exit.
-        tokio::time::timeout(
-            tokio::time::Duration::from_secs(30),
-            handle.wait_served(),
-        )
-        .await
-        .ok();
+        tokio::time::timeout(tokio::time::Duration::from_secs(30), handle.wait_served())
+            .await
+            .ok();
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
     notice!("done");
