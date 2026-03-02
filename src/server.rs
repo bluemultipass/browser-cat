@@ -45,6 +45,10 @@ struct State {
     /// Signals that the input stream has ended.
     done: Notify,
     persist: bool,
+    /// Fired by the handler after it finishes streaming a response (non-persist).
+    served: Arc<Notify>,
+    /// Signals axum to stop accepting new connections.
+    shutdown: Arc<Notify>,
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -54,8 +58,6 @@ pub struct ServerHandle {
     state: Arc<State>,
     /// Bound address (use `.port()` to get the OS-assigned port).
     pub addr: SocketAddr,
-    /// Fires when the server should shut down (non-persist: after first response).
-    shutdown: Arc<Notify>,
 }
 
 impl ServerHandle {
@@ -67,14 +69,25 @@ impl ServerHandle {
         let _ = self.state.live_tx.send(chunk);
     }
 
-    /// Signal that all input has been read. The server will shut down after
-    /// the last in-flight response completes (unless in persist mode).
-    pub fn finish(self) {
-        self.state.done.notify_waiters();
+    /// Signal that all input has been read.
+    ///
+    /// In non-persist mode the server shuts down after the handler finishes
+    /// streaming the response. Call [`wait_served`] to wait for that before
+    /// exiting.
+    pub fn finish(&self) {
+        // notify_one stores a permit so the handler sees it even if it
+        // subscribes after this call.
+        self.state.done.notify_one();
+        // Shutdown is triggered by the handler itself after streaming completes,
+        // so we do NOT fire self.shutdown here.
+    }
+
+    /// Wait until a response has been fully streamed to the browser.
+    /// Returns immediately in persist mode (server stays alive until Ctrl-C).
+    pub async fn wait_served(&self) {
         if !self.state.persist {
-            self.shutdown.notify_waiters();
+            self.state.served.notified().await;
         }
-        // In persist mode we keep serving; the process exits via Ctrl-C.
     }
 }
 
@@ -98,12 +111,15 @@ where
 
     let (live_tx, _) = broadcast::channel::<Bytes>(256);
     let shutdown = Arc::new(Notify::new());
+    let served = Arc::new(Notify::new());
 
     let state = Arc::new(State {
         buffer: Mutex::new(Vec::new()),
         live_tx,
         done: Notify::new(),
         persist: cfg.persist,
+        served: Arc::clone(&served),
+        shutdown: Arc::clone(&shutdown),
     });
 
     let state_clone = Arc::clone(&state);
@@ -126,7 +142,6 @@ where
     ServerHandle {
         state,
         addr: bound,
-        shutdown,
     }
 }
 
@@ -171,6 +186,13 @@ async fn handle_root(
                     break;
                 }
             }
+        }
+
+        // All data has been written into the response body channel.
+        // Signal served (wakes main) and shut down the server.
+        state_clone.served.notify_one();
+        if !state_clone.persist {
+            state_clone.shutdown.notify_one();
         }
     });
 

@@ -171,6 +171,10 @@ async fn main() {
             .unwrap_or_else(|| "browser-cat".into())
     });
 
+    // Yield once so the tokio-spawned server task gets a chance to call
+    // accept() before we start the (synchronous) read loop.
+    tokio::task::yield_now().await;
+
     let mut head_parser = HeadParser::new();
     let mut text_filter = TextFilter::new();
     let mut preamble_sent = false;
@@ -252,11 +256,24 @@ async fn main() {
         }
     }
 
-    notice!("done reading; shutting down");
+    notice!("done reading; waiting for browser to receive response");
     handle.finish();
 
-    // Give the server a moment to flush the response before exiting.
-    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    if cli.persist {
+        // Persist mode: keep serving until the user hits Ctrl-C.
+        tokio::signal::ctrl_c().await.ok();
+    } else {
+        // Wait until the handler has finished streaming to the browser
+        // (up to 30 s), then give TCP a moment to flush before we exit.
+        tokio::time::timeout(
+            tokio::time::Duration::from_secs(30),
+            handle.wait_served(),
+        )
+        .await
+        .ok();
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    }
+    notice!("done");
 }
 
 // ── HTML preamble ─────────────────────────────────────────────────────────────
